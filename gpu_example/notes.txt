@@ -1,0 +1,8 @@
+export PATH=/usr/local/cuda-10.2/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda-10.2/lib64:$LD_LIBRARY_PATH
+
+#compile gpu kernel saxpy
+nvcc -o saxpy saxpy.cu
+
+#compile cublas saxpy
+nvcc saxpy_cublas.c -lcublas -o saxpy_cublas
