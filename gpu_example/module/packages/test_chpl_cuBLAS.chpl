@@ -2,11 +2,12 @@ use cuBLAS;
 
 proc main() {
 
+  type t = real(32);
   const D = {0..2};
-  var X: [D] real = [1.5, 2.5, 3.5],
-      Y: [D] real = [3.5, 2.5, 1.5];
+  var X: [D] t = [1: t, 2: t, 3: t],
+      Y: [D] t = [3: t, 2: t, 1: t];
 
-  var a = 2.5;
+  var a = 2: t;
 
   const Yin = Y;
   cu_axpy(X, Y, a);
