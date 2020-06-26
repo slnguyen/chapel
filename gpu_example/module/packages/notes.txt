@@ -1,0 +1,8 @@
+compile c_cublas.c to create .o with
+nvcc -c c_cublas.c -lcublas
+
+compile cuBLAS.chpl with
+chpl cuBLAS.chpl -L/usr/local/cuda-10.2/lib64 -lcudart -lcublas
+
+compile test_chpl_cuBLAS.chpl with
+chpl test_chpl_cuBLAS.chpl -L/usr/local/cuda-10.2/lib64 -lcudart -lcublas
