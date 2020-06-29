@@ -2,7 +2,6 @@ use cuBLAS;
 use BLAS;
 use Time;
 
-require "cblas.h";
 proc main() {
 
 
@@ -23,8 +22,8 @@ proc main() {
 
   var timer: Timer;
   type t = real(32);
-  var arrSizes = [2**1, 2**5, 2**10, 2**15, 2**20, 2**25, 2**30];
-  //var arrSizes = [2, 4, 8, 16];
+
+  var arrSizes = [i in 0..30] 2**i;
   var a = 2: t;
 
   for ind in 0..arrSizes.size-1 {
@@ -34,21 +33,23 @@ proc main() {
 
     timer.start();
     cu_axpy(X, Y, a);
-    writeln("cu_axpy, N=", arrSizes[ind], " : ", timer.elapsed());
     timer.stop();
+    writeln("cu_axpy, N=", arrSizes[ind], " : ", timer.elapsed());
     timer.clear();
+  }
+
+  writeln(" ");
+
+  for ind in 0..arrSizes.size-1 {
+    var X: [0..arrSizes[ind]-1] t = [i in [0..arrSizes[ind]-1]] 3: t;
+    var Y: [0..arrSizes[ind]-1] t = [i in [0..arrSizes[ind]-1]] 4: t;
 
     timer.start();
     axpy(X, Y, a);
-    writeln("axpy, N=", arrSizes[ind], " : ", timer.elapsed());
     timer.stop();
+
+    writeln("axpy, N=", arrSizes[ind], " : ", timer.elapsed());
     timer.clear();
-
-    //for i in 0..arrSizes[ind]-1 do
-    //  writeln(Y[i]);
-
-    //writeln("X = ", X, "\n");
-    //writeln("Y = ", Y, "\n");
   }
 
 

@@ -22,6 +22,8 @@ int cublas_saxpy(int N, float alpha, float *x, int incX, float *y, int incY){
 
     cublasGetVector(N, sizeof(y[0]), d_y, 1, y, 1);
 
+    cudaFree(d_x);
+    cudaFree(d_y);
 
     cublasDestroy(handle);
     return 0;
