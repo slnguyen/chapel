@@ -1,6 +1,7 @@
 use cuBLAS;
 use BLAS;
 use Time;
+use IO;
 
 proc main() {
 
@@ -23,6 +24,9 @@ proc main() {
   var timer: Timer;
   type t = real(32);
 
+  var f = open("timing.txt", iomode.rw);
+  var writingChannel = f.writer();
+
   var arrSizes = [i in 0..30] 2**i;
   var a = 2: t;
 
@@ -34,11 +38,14 @@ proc main() {
     timer.start();
     cu_axpy(X, Y, a);
     timer.stop();
-    writeln("cu_axpy, N=", arrSizes[ind], " : ", timer.elapsed());
+    var e = timer.elapsed();
+    writeln("cu_axpy, N=", arrSizes[ind], " : ", e);
+    writingChannel.write(e, " ");
     timer.clear();
   }
 
-  writeln(" ");
+  writeln("");
+  writingChannel.writeln("");
 
   for ind in 0..arrSizes.size-1 {
     var X: [0..arrSizes[ind]-1] t = [i in [0..arrSizes[ind]-1]] 3: t;
@@ -48,7 +55,9 @@ proc main() {
     axpy(X, Y, a);
     timer.stop();
 
-    writeln("axpy, N=", arrSizes[ind], " : ", timer.elapsed());
+    var e = timer.elapsed();
+    writeln("axpy, N=", arrSizes[ind], " : ", e);
+    writingChannel.write(e, " ");
     timer.clear();
   }
 
