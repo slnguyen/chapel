@@ -1,5 +1,3 @@
-//int cublas_array(float *x, size_t size);
-//void *cublas_array(size_t size);
 void *cublas_create();
 void cublas_destroy(c_void_ptr *handle);
 float *cublas_array(size_t size);
