@@ -28,13 +28,13 @@ void operator delete(void *ptr){
 */
 
 
-void* cublas_array(size_t size){
+float* cublas_array(size_t size){
     //cudaMallocManaged((void**)&x, size*sizeof(float), 0);
     //int *a;
     //int N = 512;
     //cudaError_t err = cudaMallocManaged(&a,N*sizeof(int), cudaMemAttachGlobal);
     //cudaError_t err = cudaMallocManaged((void**)&x, size, 0);
-    void *ptr;
+    float *ptr;
     cudaError_t err = cudaMallocManaged(&ptr, size*sizeof(float), cudaMemAttachGlobal);
     printf("CUDA Error: %s\n", cudaGetErrorString(err));
     cudaDeviceSynchronize();
