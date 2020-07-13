@@ -45,6 +45,11 @@ int main(int argc, char** argv){
   printf("Max error: %f\n", maxError);
   printf("Time for kernel=%f\n", (double) (end-start)*1000/ CLOCKS_PER_SEC);
 
+  FILE *fp;
+  fp = fopen("c_cublas_times.log","a+");
+  fprintf(fp, "%f\n", (double) (end-start)*1000/ CLOCKS_PER_SEC);
+  fclose(fp);
+
   cudaFree(x);
   cudaFree(y);
   
