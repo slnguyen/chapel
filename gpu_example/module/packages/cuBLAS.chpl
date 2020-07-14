@@ -18,11 +18,8 @@ module cuBLAS {
      return x;
   }
 
-  proc cu_axpy(handle: c_void_ptr, X: c_ptr(c_float), Y: c_ptr(c_float), ref alpha: c_float, incX: c_int = 1, incY: c_int = 1)
-  {
+  proc cu_axpy(handle: c_void_ptr, N: c_int, X: c_ptr(c_float), Y: c_ptr(c_float), ref alpha: c_float, incX: c_int = 1, incY: c_int = 1){
     require "c_cublas.h", "c_cublas.o";
-
-    const N = 10:int(32);
     cublas_saxpy(handle, N, alpha, X, incX, Y, incY);
   }
 
