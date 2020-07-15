@@ -38,7 +38,7 @@ proc main() {
     timer.start();
     cu_axpy(X, Y, a);
     timer.stop();
-    var e = timer.elapsed();
+    var e = timer.elapsed()*1000;
     writeln("cu_axpy, N=", arrSizes[ind], " : ", e);
     writingChannel.write(e, " ");
     timer.clear();
@@ -55,7 +55,7 @@ proc main() {
     axpy(X, Y, a);
     timer.stop();
 
-    var e = timer.elapsed();
+    var e = timer.elapsed()*1000;
     writeln("axpy, N=", arrSizes[ind], " : ", e);
     writingChannel.write(e, " ");
     timer.clear();
