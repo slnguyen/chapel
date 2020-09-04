@@ -547,6 +547,127 @@ int cublas_zgrec(cublasHandle_t *handle, int m, int n, complex double alpha, com
     return 0;
 }
 
+int cublas_ssbmv(cublasHandle_t *handle, int uplo, int n, int k, float alpha, float *A, int lda, float *x, int incx, float beta, float *y, int incY){
+    cublasSsbmv(*handle, uplo, n, k, &alpha, A, lda, x, incX, &beta, y, incY);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_dsbmv(cublasHandle_t *handle, int uplo, int n, int k, double  alpha, double *A, int lda, double *x, int incX, double beta, double *y, int incY){
+    cublasDsbmv(*handle, uplo, n, k, &alpha, A, lda, x, incX, beta, y, incY);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_sspmv(cublasHandle_t *handle, int uplo, int n, float alpha, float *AP, float *x, int incx, float beta, float *y, int incY){
+    cublasSsbmv(*handle, uplo, n, &alpha, AP, x, incX, &beta, y, incY);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_dspmv(cublasHandle_t *handle, int uplo, int n, double alpha, double *AP,  double *x, int incX, double beta, double *y, int incY){
+    cublasDsbmv(*handle, uplo, n, k, &alpha, AP, x, incX, beta, y, incY);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_ssper(cublasHandle_t *handle, int uplo, int n, float alpha, float *x, int incX, float *AP){
+    cublasSsper(handle, uplo, n, &alpha, x, incX, AP);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_dsper(cublasHandle_t *handle, int uplo, int n, double alpha, double *x, int incX, double *AP){
+    cublasdsper(handle, uplo, n, &alpha, x, incX, AP);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_ssper2(cublasHandle_t *handle, int uplo, int n, float alpha, float *x, int incX, float *y, int incY, float *AP){
+    cublasSsper2(handle, uplo, n, &alpha, x, incX, y, incY, AP);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_dsper2(cublasHandle_t *handle, int uplo, int n, double alpha, double *x, int incX, float *y, int incY, double *AP){
+    cublasDsper2(handle, uplo, n, &alpha, x, incX, y, incY, AP);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_ssymv(cublasHandle_t *handle, int uplo, int n, float alpha, float *A, int lda, float *x, int incX, float beta, float *y, int incY){
+    cublasSsymv(handle, uplo, n, &alpha, A, lda, x, incX, &beta, y, incY);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_dsymv(cublasHandle_t *handle, int uplo, int n, double alpha, double *A, int lda, double *x, int incX, double beta, double *y, int incY){
+    cublasDsymv(handle, uplo, n, &alpha, A, lda, x, incX, &beta, y, incY);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_csymv(cublasHandle_t *handle, int uplo, int n, complex float alpha, complex float *A, int lda, complex float *x, int incX, complex float beta, complex float *y, int incY){
+    cublasCsymv(handle, uplo, n, &alpha, A, lda, x, incX, &beta, y, incY);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_zsymv(cublasHandle_t *handle, int uplo, int n, complex double alpha, complex double *A, int lda, complex double *x, int incX, complex double beta, complex double *y, int incY){
+    cublasZsymv(handle, uplo, n, &alpha, A, lda, x, incX, &beta, y, incY);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_ssyr(cublasHandle_t *handle, int uplo, int n, float alpha, float *x, int incX, float *A, int lda){
+    cublasSsyr(handle, uplo, n, &alpha, x, incX, A, lda);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_dsyr(cublasHandle_t *handle, int uplo, int n, double alpha, double *x, int incX, double *A, int lda){
+    cublasDsyr(handle, uplo, n, &alpha, x, incX, A, lda);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_csyr(cublasHandle_t *handle, int uplo, int n, complex float alpha, complex float *x, int incX, complex float *A, int lda){
+    cublasCsyr(handle, uplo, n, &alpha, x, incX, A, lda);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_zsyr(cublasHandle_t *handle, int uplo, int n, complex double alpha, complex double *x, int incX, complex double *A, int lda){
+    cublasZsyr(handle, uplo, n, &alpha, x, incX, A, lda);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_ssyr2(cublasHandle_t *handle, int uplo, int n, float alpha, float *x, int incX, float *y, int incY, float *A, int lda){
+    cublasSsyr2(handle, uplo, n, &alpha, x, incX, y, incY, A, lda);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_dsyr2(cublasHandle_t *handle, int uplo, int n, double alpha, double *x, int incX, float *y, int incY, double *A, int lda){
+    cublasDsyr2(handle, uplo, n, &alpha, x, incX, y, incY, A, lda);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_csyr2(cublasHandle_t *handle, int uplo, int n, complex float alpha, complex float *x, int incX, float *y. int incY, complex float *A, int lda){
+    cublasCsyr2(handle, uplo, n, &alpha, x, incX, y, incY, A, lda);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+int cublas_zsyr2(cublasHandle_t *handle, int uplo, int n, complex double alpha, complex double *x, int incX, float *y int incY, complex double *A, int lda){
+    cublasZsyr2(handle, uplo, n, &alpha, x, incX, y, incY, A, lda);
+    cudaDeviceSynchronize();
+    return 0;
+}
+
+
 int cublas_sgemm(cublasHandle_t *handle, int transa, int transb, int m, int n, int k, float alpha, float *A, int lda, float *B, int ldb, float beta, float *C, int ldc){
 
     cublasSgemm(*handle, transa, transb, m, n, k, &alpha, A, lda, B, ldb, &beta, C, ldc);

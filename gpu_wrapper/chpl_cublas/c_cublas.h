@@ -90,5 +90,5 @@ int cublas_cgerc(c_void_ptr *handle, int m, int n, complex float alpha, complex 
 int cublas_zgeru(c_void_ptr *handle, int m, int n, complex double alpha, complex double *x, int incX, complex double *y, int incY, complex double *A, int lda);
 int cublas_zgerc(c_void_ptr *handle, int m, int n, complex double alpha, complex double *x, int incX, complex double *y, int incY, complex double *A, int lda);
 
-
+int cublas_sbmv(c_void_ptr *handle, int uplo, int n, int k, float alpha, 
 int cublas_sgemm(c_void_ptr *handle, int transa, int transb, int m, int n, int k, float alpha, float *A, int lda, float *B, int ldb, float beta, float *C, int ldc);
