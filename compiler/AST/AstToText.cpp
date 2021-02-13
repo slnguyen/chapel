@@ -841,7 +841,17 @@ void AstToText::appendExpr(SymExpr* expr, bool printingType, bool quoteStrings)
     }
     else
     {
-      if (strcmp(var->name, "nil") != 0)
+      /*
+       * For an expression like
+       *   var o: object? = nil;
+       * we arrive here at the "nil" with printingType == false.
+       *
+       * For an expression like
+       *   x: [something] int
+       * we arrive here inside the [] with printingType == true.  When
+       * var->name is "nil" we want to produce "x: [] int".
+       */
+      if (!printingType || strcmp(var->name, "nil") != 0)
         mText += var->name;
     }
   }
@@ -1253,6 +1263,16 @@ void AstToText::appendExpr(CallExpr* expr, bool printingType)
       appendExpr(expr->get(1), printingType);
       mText += ".type";
     }
+    else if (expr->isPrimitive(PRIM_TRY_EXPR))
+    {
+      mText += "try ";
+      appendExpr(expr->get(1), printingType);
+    }
+    else if (expr->isPrimitive(PRIM_TRYBANG_EXPR))
+    {
+      mText += "try! ";
+      appendExpr(expr->get(1), printingType);
+    }
     else if (expr->isPrimitive(PRIM_NEW))
     {
       mText += "new ";
@@ -1319,6 +1339,27 @@ void AstToText::appendExpr(CallExpr* expr, bool printingType)
     {
       mText += "nonnilable ";
       appendExpr(expr->get(1), printingType);
+    }
+    else if (!expr->isPrimitive(PRIM_UNKNOWN))
+    {
+      mText += "__primitive(\"";
+      mText += expr->primitive->name;
+      mText += "\"";
+      for (int index = 1; index <= expr->numActuals(); index++)
+        {
+          mText += ", ";
+          if (!isSymExpr(expr->get(index)))
+          {
+            appendExpr(expr->get(index), printingType);
+          }
+          else
+          {
+            mText += "\"";
+            appendExpr(expr->get(index), printingType);
+            mText += "\"";
+          }
+        }
+      mText += ")";
     }
     else
     {
@@ -1426,50 +1467,56 @@ void AstToText::appendExpr(IfExpr* expr, bool printingType)
 
 void AstToText::appendExpr(LoopExpr* expr, bool printingType)
 {
+  std::string start,end;
   if (expr->forall)
   {
     if (expr->maybeArrayType)
     {
-      mText += '[';
-      if(expr->indices)
-      {
-        appendExpr(expr->indices, printingType);
-        mText += " in ";
-      }
-      
-      if(expr->iteratorExpr)
-      {
-        appendExpr(expr->iteratorExpr, printingType);
-        mText += ']';
-
-        if (BlockStmt* bs = toBlockStmt(expr->loopBody))
-        {
-          mText += ' ';
-          appendExpr(bs->body.get(1), printingType);
-        }
-
-        else
-        {
-          mText += "AppendExpr.Loop01";
-        }
-      
-      }
-      
-      else
-      {
-        mText += "AppendExpr.Loop02";
-      }
+      start = "[";
+      end = "]";
     }
 
     else
     {
-      mText += "AppendExpr.Loop03";
+      start = "forall ";
+      end = " do";
     }
   }
 
   else
   {
-    mText += "AppendExpr.Loop04";
+    start = "for ";
+    end = " do";
+  }
+  mText += start;
+
+  if (expr->indices)
+  {
+    appendExpr(expr->indices, printingType);
+    mText += " in ";
+  }
+
+  if (expr->iteratorExpr)
+  {
+    appendExpr(expr->iteratorExpr, printingType);
+    mText += end;
+
+    if (BlockStmt* bs = toBlockStmt(expr->loopBody))
+    {
+      mText += ' ';
+      appendExpr(bs->body.get(1), printingType);
+    }
+
+    else
+    {
+      mText += " AppendExpr.Loop01";
+    }
+
+  }
+
+  else
+  {
+    mText += " AppendExpr.Loop02";
   }
 }
 

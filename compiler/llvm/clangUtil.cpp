@@ -1169,7 +1169,7 @@ void readMacrosClang(void) {
 // 3: keep the code generator open until we finish generating Chapel code,
 //    since we might need to code generate called functions.
 // 4: get LLVM values for code generated C things (e.g. types, function ptrs)
-class CCodeGenConsumer : public ASTConsumer {
+class CCodeGenConsumer final : public ASTConsumer {
   private:
     GenInfo* info;
     clang::DiagnosticsEngine* Diags;
@@ -1398,12 +1398,12 @@ class CCodeGenConsumer : public ASTConsumer {
 };
 
 
-class CCodeGenAction : public ASTFrontendAction {
+class CCodeGenAction final : public ASTFrontendAction {
  public:
   CCodeGenAction() { }
  protected:
   std::unique_ptr<ASTConsumer>
-  CreateASTConsumer(CompilerInstance &CI, StringRef InFile);
+  CreateASTConsumer(CompilerInstance &CI, StringRef InFile) override;
 };
 
 std::unique_ptr<ASTConsumer>
@@ -2419,22 +2419,13 @@ llvm::Type* codegenCType(const TypeDecl* td)
   clang::CodeGenerator* cCodeGen = clangInfo->cCodeGen;
   INT_ASSERT(cCodeGen);
 
-  //CodeGen::CodeGenTypes & cdt = info->cgBuilder->getTypes();
   QualType qType;
 
   // handle TypedefDecl
   if( const TypedefNameDecl* tnd = dyn_cast<TypedefNameDecl>(td) ) {
     qType = tnd->getCanonicalDecl()->getUnderlyingType();
-    // had const Type *ctype = td->getUnderlyingType().getTypePtrOrNull();
-    //could also do:
-    //  qType =
-    //   tnd->getCanonicalDecl()->getTypeForDecl()->getCanonicalTypeInternal();
   } else if( const EnumDecl* ed = dyn_cast<EnumDecl>(td) ) {
     qType = ed->getCanonicalDecl()->getIntegerType();
-    // could also use getPromotionType()
-    //could also do:
-    //  qType =
-    //   tnd->getCanonicalDecl()->getTypeForDecl()->getCanonicalTypeInternal();
   } else if( const RecordDecl* rd = dyn_cast<RecordDecl>(td) ) {
     RecordDecl *def = rd->getDefinition();
     INT_ASSERT(def);
@@ -3013,6 +3004,66 @@ getCGArgInfo(const clang::CodeGen::CGFunctionInfo* CGI, int curCArg)
   return argInfo;
 }
 
+static unsigned helpGetCTypeAlignment(const clang::QualType& qType) {
+  GenInfo* info = gGenInfo;
+  INT_ASSERT(info);
+  ClangInfo* clangInfo = info->clangInfo;
+  INT_ASSERT(clangInfo);
+
+  unsigned alignInBits = clangInfo->Ctx->getTypeAlignIfKnown(qType);
+
+  unsigned alignInBytes = alignInBits / 8;
+  // round it up to a power of 2
+  unsigned rounded = 1;
+  while (rounded < alignInBytes) rounded *= 2;
+
+  return rounded;
+}
+
+static unsigned helpGetCTypeAlignment(const clang::TypeDecl* td) {
+  QualType qType;
+
+  if (const TypedefNameDecl* tnd = dyn_cast<TypedefNameDecl>(td)) {
+    qType = tnd->getCanonicalDecl()->getUnderlyingType();
+  } else if (const EnumDecl* ed = dyn_cast<EnumDecl>(td)) {
+    qType = ed->getCanonicalDecl()->getIntegerType();
+  } else if (const RecordDecl* rd = dyn_cast<RecordDecl>(td)) {
+    RecordDecl *def = rd->getDefinition();
+    INT_ASSERT(def);
+    qType=def->getCanonicalDecl()->getTypeForDecl()->getCanonicalTypeInternal();
+  } else {
+    INT_FATAL("Unknown clang type declaration");
+  }
+
+  return helpGetCTypeAlignment(qType);
+}
+static unsigned helpGetAlignment(::Type* type) {
+  GenInfo* info = gGenInfo;
+  INT_ASSERT(info);
+
+  if (type->symbol->hasFlag(FLAG_EXTERN)) {
+    clang::TypeDecl* cType = NULL;
+    clang::ValueDecl* cVal = NULL;
+    info->lvt->getCDecl(type->symbol->cname, &cType, &cVal);
+    if (cType) {
+      return helpGetCTypeAlignment(cType);
+    }
+  }
+
+  // use the maximum alignment of all the fields
+  unsigned maxAlign = 1;
+
+  if (isRecord(type) || isUnion(type)) {
+    AggregateType* at = toAggregateType(type);
+    for_fields(field, at) {
+      unsigned fieldAlign = helpGetAlignment(field->type);
+      if (maxAlign < fieldAlign)
+        maxAlign = fieldAlign;
+    }
+  }
+
+  return maxAlign;
+}
 
 #if HAVE_LLVM_VER >= 100
 llvm::MaybeAlign getPointerAlign(int addrSpace) {
@@ -3024,6 +3075,31 @@ llvm::MaybeAlign getPointerAlign(int addrSpace) {
   uint64_t align = clangInfo->Clang->getTarget().getPointerAlign(0);
   return llvm::MaybeAlign(align);
 }
+llvm::MaybeAlign getCTypeAlignment(const clang::TypeDecl* td) {
+  unsigned rounded = helpGetCTypeAlignment(td);
+  if (rounded > 1) {
+    return llvm::MaybeAlign(rounded);
+  } else {
+    return llvm::MaybeAlign();
+  }
+}
+llvm::MaybeAlign getCTypeAlignment(const clang::QualType& qt) {
+  unsigned rounded = helpGetCTypeAlignment(qt);
+  if (rounded > 1) {
+    return llvm::MaybeAlign(rounded);
+  } else {
+    return llvm::MaybeAlign();
+  }
+}
+llvm::MaybeAlign getAlignment(::Type* type) {
+  unsigned rounded = helpGetAlignment(type);
+  if (rounded > 1) {
+    return llvm::MaybeAlign(rounded);
+  } else {
+    return llvm::MaybeAlign();
+  }
+}
+
 #else
 uint64_t getPointerAlign(int addrSpace) {
   GenInfo* info = gGenInfo;
@@ -3034,7 +3110,17 @@ uint64_t getPointerAlign(int addrSpace) {
   uint64_t align = clangInfo->Clang->getTarget().getPointerAlign(0);
   return align;
 }
+unsigned getCTypeAlignment(const clang::TypeDecl* td) {
+  return helpGetCTypeAlignment(td);
+}
+unsigned getCTypeAlignment(const clang::QualType& qt) {
+  return helpGetCTypeAlignment(qt);
+}
+unsigned getAlignment(::Type* type) {
+  return helpGetAlignment(type);
+}
 #endif
+
 
 bool isBuiltinExternCFunction(const char* cname)
 {
@@ -4030,6 +4116,23 @@ static void moveGeneratedLibraryFile(const char* tmpbinname) {
 }
 
 void print_clang(clang::Decl* d) {
+  if (d == NULL)
+    fprintf(stderr, "NULL");
+  else
+    d->print(llvm::dbgs());
+
+  fprintf(stderr, "\n");
+}
+
+void print_clang(clang::TypeDecl* d) {
+  if (d == NULL)
+    fprintf(stderr, "NULL");
+  else
+    d->print(llvm::dbgs());
+
+  fprintf(stderr, "\n");
+}
+void print_clang(clang::ValueDecl* d) {
   if (d == NULL)
     fprintf(stderr, "NULL");
   else

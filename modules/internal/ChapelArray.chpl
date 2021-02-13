@@ -1268,7 +1268,7 @@ module ChapelArray {
       } else if isSparseDom(other) {
         this.init(other.dist, other.parentDom);
       } else {
-        compilerError("Cannot initialize '", this.type:string, "' from '", other.type:string, "'");
+        compilerError("cannot initialize '", this.type:string, "' from '", other.type:string, "'");
         this.init(nil);
       }
 
@@ -2273,6 +2273,10 @@ module ChapelArray {
 
     proc supportsAutoLocalAccess() param {
       return _value.dsiSupportsAutoLocalAccess();
+    }
+
+    proc iteratorYieldsLocalElements() param {
+      return _value.dsiIteratorYieldsLocalElements();
     }
 
   }  // record _domain
