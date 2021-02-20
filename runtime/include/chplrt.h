@@ -34,6 +34,7 @@
 #define _chplrt_H_
 
 #include "sys_basic.h"
+#include "cuda.h"
 
 #ifndef LAUNCHER
 
