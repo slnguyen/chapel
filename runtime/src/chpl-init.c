@@ -176,11 +176,15 @@ void chpl_rt_init(int argc, char* argv[]) {
   chpl_error_init();  // This does local-only initialization
   chpl_topo_init();
   chpl_comm_init(&argc, &argv);
+  printf("before chp_mem_init()\n");
   chpl_mem_init();
+  printf("before chpl_comm_post_mem_init()\n");
   chpl_comm_post_mem_init();
+  printf("before chpl_comm_barrier\n");
 
   chpl_comm_barrier("about to leave comm init code");
 
+  
   CreateConfigVarTable();      // get ready to start tracking config vars
   chpl_gen_main_arg.argv = chpl_malloc(argc * sizeof(char*));
   chpl_gen_main_arg.argv[0] = argv[0];

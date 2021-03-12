@@ -32,8 +32,10 @@ static int heapInitialized = 0;
 
 
 void chpl_mem_init(void) {
+  printf("in chpl_mem_init\n");
   chpl_mem_layerInit();
   heapInitialized = 1;
+  printf("heapInitialized = %i\n", heapInitialized);
 }
 
 

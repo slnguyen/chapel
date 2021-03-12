@@ -27,9 +27,11 @@
 int main(int argc, char* argv[]) {
 
   // Initialize the runtime
+  printf("before chpl_rt_init\n");
   chpl_rt_init(argc, argv);
 
   // Run the main function for this node.
+  printf("before chpl_task_callMain\n");
   chpl_task_callMain(chpl_executable_init); 
 
   // have everyone exit, returning the value returned by the user written main

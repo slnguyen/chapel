@@ -305,6 +305,7 @@ static void SIGINT_handler(int sig)
 // 2) qthread_finalize() only does anything when called from the original
 //    context that called qthread_initialize, so this is an easy way to ensure
 //    that.
+
 static void *initializer(void *junk)
 {
     qthread_initialize();
@@ -710,7 +711,8 @@ void chpl_task_init(void)
     if (verbosity >= 2) { chpl_qt_setenv("INFO", "1", 0); }
 
     // Initialize qthreads
-    pthread_create(&initer, NULL, initializer, NULL);
+    
+    pthread_create(&initer, NULL, initializer, NULL); //calls chunk_alloc in new thread
     while (chpl_qthread_done_initializing == 0)
         sched_yield();
 
@@ -726,6 +728,22 @@ void chpl_task_init(void)
             perror("Could not register SIGINT handler");
         }
     }
+    
+    /*
+       Thread 1 "hello" hit Breakpoint 1, chpl_task_init () at tasks-qthreads.c:715
+warning: Source file is more recent than executable.
+715	        sched_yield();
+(gdb) s
+sched_yield () at ../sysdeps/unix/syscall-template.S:78
+78	../sysdeps/unix/syscall-template.S: No such file or directory.
+(gdb) s
+
+Thread 2 "hello" received signal SIGSEGV, Segmentation fault.
+[Switching to Thread 0x7ffff67ff700 (LWP 30452)]
+arena_miscelm_size_get (miscelm=0x7ffff5e00010)
+    at /home/sarah/repos/w/1/third-party/jemalloc/jemalloc-src/src/arena.c:57
+57		return (arena_mapbits_size_decode(mapbits));
+*/
 }
 
 void chpl_task_exit(void)

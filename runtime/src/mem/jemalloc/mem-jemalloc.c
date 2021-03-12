@@ -34,6 +34,20 @@
 #include "chpltypes.h"
 #include "error.h"
 
+#include <sys/mman.h>
+
+//#include <sys/types.h>
+//#include <hugetlbfs.h>
+
+#define handle_error(msg) \
+  do { perror(msg); exit(EXIT_FAILURE); } while (0)
+
+#define HUGE_PAGE_SIZE (2 * 1024 * 1024)
+#define ALIGN_TO_PAGE_SIZE(x) (((x) + HUGE_PAGE_SIZE -1) / HUGE_PAGE_SIZE * HUGE_PAGE_SIZE)
+
+#define ALIGN_DN(i, size)  ((i) & ~((size) - 1))
+#define ALIGN_UP(i, size)  ALIGN_DN((i) + (size) - 1, size)
+
 // Decide whether or not to try to use jemalloc's chunk hooks interface
 //   jemalloc < 4.0 didn't support chunk_hooks_t
 //   jemalloc 4.1 changed opt.nareas from size_t to unsigned
@@ -78,11 +92,12 @@ static inline void* alignHelper(void* base_ptr, size_t offset, size_t alignment)
 // Our chunk replacement hook for allocations (Essentially a replacement for
 // mmap/sbrk.) Grab memory out of the fixed shared heap or get an extension
 // chunk, and give it to jemalloc.
+//chunk_alloc called even if comm set to none?
 static void* chunk_alloc(void *chunk, size_t size, size_t alignment, bool *zero, bool *commit, unsigned arena_ind) {
-
+  printf("in chunk_alloc, size: %f MiB\n", size/1024.0/1024.0);
   void* cur_chunk_base = NULL;
 
-  if (heap.type == FIXED) {
+  if (heap.type == FIXED) { //heap allocated with gasnet
     //
     // Get more space out of the fixed heap.
     //
@@ -122,25 +137,46 @@ static void* chunk_alloc(void *chunk, size_t size, size_t alignment, bool *zero,
     //
     // Get a dynamic extension chunk.
     //
-    cur_chunk_base = chpl_comm_regMemAlloc(size, CHPL_RT_MD_MEM_HEAP_SPACE,
+    printf("getting dynamic extension chunk\n");
+    cur_chunk_base = chpl_comm_regMemAlloc(size, CHPL_RT_MD_MEM_HEAP_SPACE, //calls get_huge_pages (system-call?) - runtime/src/comm/ugni/comm-ugni.c:3404
                                            0, CHPL_FILE_IDX_INTERNAL);
 
+    size_t heap_page_size = chpl_comm_regMemHeapPageSize();
+    printf("heap_page_size before if statement: %zu\n", heap_page_size);
     if (cur_chunk_base == NULL) {
-      return NULL;
+      heap_page_size = chpl_getHeapPageSize();
+      printf("heap_page_size after if statement: %zu\n", heap_page_size);
+      size_t aligned_page_size = ALIGN_UP(size + (1<<24) - (1), 1<<24);
+      cur_chunk_base = mmap(NULL, aligned_page_size , PROT_READ | PROT_WRITE,
+                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+      cur_chunk_base = (void*) ALIGN_UP((uint64_t) cur_chunk_base, 1<<24);
+      //size_t aligned_page_size = ALIGN_UP(size, heap_page_size);
+      //cur_chunk_base = mmap(NULL, aligned_page_size, PROT_READ | PROT_WRITE,
+      //                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0); //use function in runtime to get page size
+      printf("cur_chunk_base: %p, size of cur_chunk: %i\n", cur_chunk_base, (int)aligned_page_size);
+      if (cur_chunk_base == MAP_FAILED){
+        printf("map failed\n");
+        cur_chunk_base = NULL;
+      }
+
+     //get_huge_pages(ALIGN_UP(size, gethugepagesize()), GHP_DEFAULT);
+      //call get_huge_page here for now
+      //return NULL;
     }
 
-    //
     // Localize the new memory via first-touch, by storing to each page.
     // This will give the memory affinity to the NUMA domain (if any)
     // we were running on when we allocated it.  It also commits the
     // memory, in the jemalloc sense.
     //
-    const size_t heap_page_size = chpl_comm_regMemHeapPageSize();
+
     for (int i = 0; i < size; i += heap_page_size) {
       ((char*) cur_chunk_base)[i] = 0;
     }
 
-    chpl_comm_regMemPostAlloc(cur_chunk_base, size);
+    
+
+    chpl_comm_regMemPostAlloc(cur_chunk_base, size); //for gpu call another funciton that is similar in addition to this funciton
 
     // Support useUpMemNotInHeap by hiding the fixed/dynamic distinction
     heap.base = cur_chunk_base;
@@ -155,9 +191,13 @@ static void* chunk_alloc(void *chunk, size_t size, size_t alignment, bool *zero,
     memset(cur_chunk_base, 0, size);
   }
 
+  //TODO: add function here to call chpl_register_gpu that registers cur_chunk_base with GPU (w/ cudaHostRegister)
+  //cudaHostRegister(cur_chunk_base, size, cudaHostRegisterMapped);
+
   // Commit is not relevant for linux/darwin, but jemalloc wants us to set it
   *commit = true;
 
+  //cur_chunk_base = NULL;
   return cur_chunk_base;
 }
 
@@ -361,8 +401,10 @@ static void useUpMemNotInHeap(void) {
 static void initializeSharedHeap(void) {
   initialize_arenas();
 
+  printf("replaceChunkHooks\n");
   replaceChunkHooks();
 
+  printf("useUpMemNotInHeap\n");
   useUpMemNotInHeap();
 }
 
@@ -372,13 +414,34 @@ static void initializeSharedHeap(void) {
 unsigned CHPL_JE_LG_ARENA;
 
 void chpl_mem_layerInit(void) {
+  printf("in chpl_mem_layerInit\n");
+
+  //size_t real_size = ALIGN_TO_PAGE_SIZE(HUGE_PAGE_SIZE);
+  //char *ptr = (char *)mmap(NULL, real_size, PROT_READ | PROT_WRITE,
+  //                         MAP_PRIVATE | MAP_ANONYMOUS |
+  //                         MAP_POPULATE | MAP_HUGETLB, -1, 0);
+
+  //char *ptr = (char *)mmap(NULL, real_size, PROT_READ | PROT_WRITE,
+  //                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+  //if(ptr == MAP_FAILED){
+  //  handle_error("mmap");
+  //}
+
   void* heap_base;
   size_t heap_size;
 
   chpl_comm_regMemHeapInfo(&heap_base, &heap_size);
+
+  //heap_base=ptr;
+  //heap_size=real_size;
+
   if (heap_base != NULL && heap_size == 0) {
     chpl_internal_error("if heap address is specified, size must be also");
   }
+
+  //heap_base = registered_heap_start;
+  //heap_size = registered_heap_size;
 
   // If we have a fixed shared heap, initialize it. This will take care
   // of initializing jemalloc. Otherwise, do a first allocation to allow
@@ -387,6 +450,8 @@ void chpl_mem_layerInit(void) {
   //
   //   jemalloc 4.5.0 man: "Once, when the first call is made to one of the
   //   memory allocation routines, the allocator initializes its internals"
+  printf("heap_base: %p\n", heap_base);
+  printf("heap_size: %zu\n", heap_size);
   if (heap_base != NULL) {
     heap.type = FIXED;
     heap.base = heap_base;
@@ -396,9 +461,12 @@ void chpl_mem_layerInit(void) {
       chpl_internal_error("cannot init chunk_alloc lock");
     }
     initializeSharedHeap();
-  } else if (chpl_comm_regMemAllocThreshold() < SIZE_MAX) {
+  } else if (chpl_comm_regMemAllocThreshold() < SIZE_MAX || true) {
     heap.type = DYNAMIC;
-    initializeSharedHeap();
+    printf("before initializeSharedHeap\n");
+    initializeSharedHeap(); //calls replaceChunkHooks which sets the hooks for jemalloc, add another elseif for gpu
+                            //that calls initializeSharedHeap();
+    printf("after initializeSharedHeap\n");
   } else {
     void* p;
     heap.type = NONE;

@@ -67,13 +67,13 @@ void* chpl_mem_array_alloc(size_t nmemb, size_t eltSize,
   // registered memory, when that is possible.
   //
   chpl_memhook_malloc_pre(nmemb, eltSize, CHPL_RT_MD_ARRAY_ELEMENTS,
-                          lineno, filename);
+                          lineno, filename); //only called when allocating an array
 
   const size_t size = nmemb * eltSize;
   void* p = NULL;
   *callPostAlloc = false;
-  if (chpl_mem_size_justifies_comm_alloc(size)) {
-    p = chpl_comm_regMemAlloc(size, CHPL_RT_MD_ARRAY_ELEMENTS,
+  if (chpl_mem_size_justifies_comm_alloc(size)) { //returns false if comm=None?
+    p = chpl_comm_regMemAlloc(size, CHPL_RT_MD_ARRAY_ELEMENTS,  //change chpl_comm_regMemAlloc to do cudaHostRegister?
                               lineno, filename);
     if (p != NULL) {
       *callPostAlloc = true;
@@ -81,7 +81,7 @@ void* chpl_mem_array_alloc(size_t nmemb, size_t eltSize,
   }
 
   if (p == NULL) {
-    p = chpl_malloc(nmemb * eltSize);
+    p = chpl_malloc(nmemb * eltSize);  //calls the jemalloc hooks
   }
 
   chpl_memhook_malloc_post(p, nmemb, eltSize, CHPL_RT_MD_ARRAY_ELEMENTS,
